@@ -1,0 +1,52 @@
+---
+- name: "Docker installation, configuration"
+  become: true
+  hosts: amazon
+  vars_files:
+    - variable.yml
+
+  tasks:
+
+    - name: "Docker Installation"
+      yum:
+        name: docker
+        state: present
+
+    - name: "Installing pip"
+      yum:
+        name: python-pip
+        state: present
+
+    - name: "Install Docker SDK for Python2 and before"
+      pip:
+        name: docker-py
+
+    - name: "Restarting/Enabling service"
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: "Creating {{ docker_user }}  user"
+      user:
+        name: "{{ docker_user}}"
+        state: present
+        groups:
+          - docker
+        append: yes
+
+    - name: "Setting KeyBased Authentication for {{ docker_user }} user"
+      authorized_key:
+        user: "{{ docker_user }}"
+        state: present
+        key: "{{ lookup('file', './docker.pub') }}"
+
+    - name: "apache container"
+      docker_container:
+        name: mycontainer
+        image: jomyg/htmlapp:latest
+        pull: yes
+        state: started
+        recreate: yes
+        ports:
+          - "80:80"
